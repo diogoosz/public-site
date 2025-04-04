@@ -1,0 +1,47 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repositório privado
+        uses: actions/checkout@v2
+        with:
+          repository: diogoosz/private-site  # Substitua pelo nome do seu repositório privado
+          token: ${{ secrets.GH_TOKEN }}  # Adiciona o token de acesso ao repositório privado
+
+      - name: Configurar o Git
+        run: |
+          git config --global user.email "diogomarciano40@gmail.com"
+          git config --global user.name "diogoosz"
+
+      - name: Verificar estrutura do repositório privado
+        run: |
+          echo "Verificando arquivos no repositório privado..."
+          ls -R
+
+      - name: Clonar o repositório público
+        run: |
+          git clone https://github.com/diogoosz/public-site.git public-site  # Clona o repositório público
+          cd public-site
+          git checkout main || git checkout --orphan main  # Cria a branch `main` se não existir
+          git pull origin main  # Puxa os últimos commits da branch main
+
+      - name: Copiar arquivos do repositório privado para o repositório público
+        run: |
+          echo "Copiando arquivos do repositório privado para o repositório público"
+          rsync -av --exclude='public-site' ./ public-site/  # Copiar arquivos, excluindo o diretório public-site
+          ls -R public-site  # Verifica a estrutura após a cópia
+
+      - name: Commit e push para a branch main do repositório público
+        run: |
+          cd public-site
+          git add .  # Adiciona as mudanças
+          git commit -m "Deploy do site"
+          git push https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/diogoosz/public-site.git main  # Faz o push usando o token de acesso pessoal
